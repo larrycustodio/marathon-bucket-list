@@ -15,7 +15,7 @@ export default function Dashboard() {
   const [editTarget, setEditTarget] = useState<MarathonEvent | null>(null);
 
   function setParams(updates: Partial<SearchParams>) {
-    navigate({ search: (prev: SearchParams) => ({ ...prev, ...updates }) });
+    navigate({ search: (prev: SearchParams) => ({ ...prev, ...updates }), resetScroll: false });
   }
 
   const tab: MapTab = search.tab ?? 'usa';
