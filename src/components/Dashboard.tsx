@@ -5,6 +5,7 @@ import MapView from './MapView';
 import EventTable from './EventTable';
 import EventForm from './EventForm';
 import SummaryPanel from './SummaryPanel';
+import SummaryWidget from './SummaryWidget';
 import type { MarathonEvent } from '../types';
 import type { SearchParams, MapTab, EventTypeFilter } from '../router';
 
@@ -40,7 +41,8 @@ export default function Dashboard() {
       {/* Header */}
       <div className="mb-4">
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Race Event Bucket List</h1>
-        <p className="text-slate-500 mt-1 text-sm">Races done and races dreamed of, before 40.</p>
+        <p className="text-slate-500 mt-1 text-sm">Races done and races dreamed of, before I grow 👴.</p>
+        <SummaryWidget events={events} finished={finished} planned={planned} />
       </div>
 
       {/* Two-panel layout */}
