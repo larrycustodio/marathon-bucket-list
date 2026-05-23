@@ -1,9 +1,10 @@
-import { useMemo, useState, useEffect } from 'react';
-import type { MarathonEvent, EventStatus } from '../types';
-import type { EventTypeFilter } from '../router';
-import { useDeleteEvent } from '../hooks/useEvents';
-import { timeUntil } from '../utils/timeUntil';
-import StravaIcon from './StravaIcon';
+import { useMemo, useState, useEffect } from "react";
+import type { MarathonEvent, EventStatus } from "../types";
+import type { EventTypeFilter } from "../router";
+import { useDeleteEvent } from "../hooks/useEvents";
+import { timeUntil } from "../utils/timeUntil";
+import StravaIcon from "./StravaIcon";
+import EventBadge from "./EventBadge";
 
 interface Props {
   events: MarathonEvent[];
@@ -16,56 +17,51 @@ interface Props {
   onEdit: (event: MarathonEvent) => void;
 }
 
-function formatEventType(event: MarathonEvent): string {
-  if (event.eventType === 'other') {
-    return event.customDistance != null
-      ? `${event.customDistance} ${event.customDistanceUnit ?? 'mi'}`
-      : 'Other';
-  }
-  return event.eventType === 'full' ? '26.2' : '13.1';
-}
-
-function typeBadgeClass(event: MarathonEvent): string {
-  if (event.eventType === 'full') return 'bg-purple-100 text-purple-700';
-  if (event.eventType === 'half') return 'bg-blue-100 text-blue-700';
-  return 'bg-slate-100 text-slate-600';
-}
-
 function formatTime(t?: string) {
-  return t ?? '—';
+  return t ?? "—";
 }
 
 function formatDate(d?: string) {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 const FILTER_LABELS: Record<string, string> = {
-  half: 'Half Marathon',
-  full: 'Marathon',
-  other: 'Other',
+  half: "Half Marathon",
+  full: "Marathon",
+  other: "Other",
 };
 
 function formatLocation(event: MarathonEvent) {
-  if (event.state === '—' || !event.state) {
+  if (event.state === "—" || !event.state) {
     return `${event.city}, ${event.country}`;
   }
   return `${event.city}, ${event.state}`;
 }
 
 export default function EventTable({
-  events, title, status,
-  search, onSearchChange,
-  typeFilter, onTypeFilterChange,
+  events,
+  title,
+  status,
+  search,
+  onSearchChange,
+  typeFilter,
+  onTypeFilterChange,
   onEdit,
 }: Props) {
   const deleteEvent = useDeleteEvent();
   const [page, setPage] = useState(1);
 
-  useEffect(() => { setPage(1); }, [search, typeFilter]);
+  useEffect(() => {
+    setPage(1);
+  }, [search, typeFilter]);
 
   const filtered = useMemo(() => {
-    return events.filter(e => {
+    return events.filter((e) => {
       const q = search.toLowerCase();
       const matchesSearch =
         !q ||
@@ -73,15 +69,21 @@ export default function EventTable({
         e.state.toLowerCase().includes(q) ||
         e.city.toLowerCase().includes(q) ||
         e.country.toLowerCase().includes(q);
-      const matchesType = typeFilter === 'all' || e.eventType === typeFilter;
+      const matchesType = typeFilter === "all" || e.eventType === typeFilter;
       return matchesSearch && matchesType;
     });
   }, [events, search, typeFilter]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
-      const dateA = status === 'finished' ? (a.finishedDate ?? a.plannedDate) : a.plannedDate;
-      const dateB = status === 'finished' ? (b.finishedDate ?? b.plannedDate) : b.plannedDate;
+      const dateA =
+        status === "finished"
+          ? (a.finishedDate ?? a.plannedDate)
+          : a.plannedDate;
+      const dateB =
+        status === "finished"
+          ? (b.finishedDate ?? b.plannedDate)
+          : b.plannedDate;
       return dateA.localeCompare(dateB);
     });
   }, [filtered, status]);
@@ -100,12 +102,12 @@ export default function EventTable({
               type="text"
               placeholder="Search name, state, country..."
               value={search}
-              onChange={e => onSearchChange(e.target.value)}
+              onChange={(e) => onSearchChange(e.target.value)}
               className="border border-slate-200 rounded-lg px-3 py-1.5 pr-7 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
             {search && (
               <button
-                onClick={() => onSearchChange('')}
+                onClick={() => onSearchChange("")}
                 aria-label="Clear search"
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors leading-none text-base"
               >
@@ -115,7 +117,9 @@ export default function EventTable({
           </div>
           <select
             value={typeFilter}
-            onChange={e => onTypeFilterChange(e.target.value as EventTypeFilter)}
+            onChange={(e) =>
+              onTypeFilterChange(e.target.value as EventTypeFilter)
+            }
             className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             <option value="all">Filter by Distance</option>
@@ -126,123 +130,155 @@ export default function EventTable({
         </div>
       </div>
 
-      {typeFilter !== 'all' && (
+      {typeFilter !== "all" && (
         <div className="flex items-center gap-2 -mt-2 mb-3">
           <button
-            onClick={() => onTypeFilterChange('all')}
+            onClick={() => onTypeFilterChange("all")}
             className="group flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
           >
             {FILTER_LABELS[typeFilter]}
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-500 leading-none">✕</span>
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-500 leading-none">
+              ✕
+            </span>
           </button>
         </div>
       )}
 
       {sorted.length === 0 ? (
-        <p className="text-slate-400 text-sm text-center py-8">No events yet.</p>
+        <p className="text-slate-400 text-sm text-center py-8">
+          No events yet.
+        </p>
       ) : (
         <>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 text-left text-slate-500 text-xs uppercase tracking-wide">
-                <th className="pb-2 pr-4 font-medium">Event</th>
-                <th className="pb-2 pr-4 font-medium">Type</th>
-                <th className="pb-2 pr-4 font-medium">Location</th>
-                <th className="pb-2 pr-4 font-medium">{status === 'finished' ? 'Date' : 'Planned'}</th>
-                {status === 'finished' && <th className="pb-2 pr-4 font-medium">Time</th>}
-                <th className="pb-2 pr-4 font-medium">Goal</th>
-                <th className="pb-2 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginated.map(event => (
-                <tr key={event.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                  <td className="py-3 pr-4 font-medium text-slate-900">
-                    <div className="flex items-center gap-2">
-                      {event.website ? (
-                        <a href={event.website} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-600 underline underline-offset-2">
-                          {event.name}
-                        </a>
-                      ) : event.name}
-                      {event.stravaUrl && (
-                        <a
-                          href={event.stravaUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="View on Strava"
-                          className="shrink-0 text-[#FC4C02] hover:opacity-75 transition-opacity"
-                        >
-                          <StravaIcon className="w-4 h-4" />
-                        </a>
-                      )}
-                    </div>
-                  </td>
-                  <td className="py-3 pr-4">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${typeBadgeClass(event)}`}>
-                      {formatEventType(event)}
-                    </span>
-                  </td>
-                  <td className="py-3 pr-4 text-slate-600">{formatLocation(event)}</td>
-                  <td className="py-3 pr-4 text-slate-600">
-                    <div className="flex items-center gap-2">
-                      {formatDate(status === 'finished' ? (event.finishedDate ?? event.plannedDate) : event.plannedDate)}
-                      {status === 'planned' && (() => {
-                        const t = timeUntil(event.plannedDate);
-                        return (
-                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold tracking-wide ${t.bgClass} ${t.textColorClass}`}>
-                            {t.text}
-                          </span>
-                        );
-                      })()}
-                    </div>
-                  </td>
-                  {status === 'finished' && (
-                    <td className="py-3 pr-4 font-mono text-slate-700">{formatTime(event.finishedTime)}</td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 text-left text-slate-500 text-xs uppercase tracking-wide">
+                  <th className="pb-2 pr-4 font-medium">Event</th>
+                  <th className="pb-2 pr-4 font-medium">Type</th>
+                  <th className="pb-2 pr-4 font-medium">Location</th>
+                  <th className="pb-2 pr-4 font-medium">
+                    {status === "finished" ? "Date" : "Planned"}
+                  </th>
+                  {status === "finished" && (
+                    <th className="pb-2 pr-4 font-medium">Time</th>
                   )}
-                  <td className="py-3 pr-4 font-mono text-slate-400">{formatTime(event.goalFinishTime)}</td>
-                  <td className="py-3">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => onEdit(event)}
-                        className="text-xs text-slate-500 hover:text-emerald-600 transition-colors"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm(`Delete "${event.name}"?`)) deleteEvent.mutate(event.id);
-                        }}
-                        className="text-xs text-slate-400 hover:text-red-500 transition-colors"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
+                  <th className="pb-2 pr-4 font-medium">Goal</th>
+                  <th className="pb-2 font-medium">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {totalPages > 1 && (
-          <div className="flex items-center justify-end gap-3 mt-4 pt-3 border-t border-slate-100">
-            <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-2 py-1 text-xs text-slate-500 hover:text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              ← Prev
-            </button>
-            <span className="text-xs text-slate-400 tabular-nums">{page} / {totalPages}</span>
-            <button
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="px-2 py-1 text-xs text-slate-500 hover:text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              Next →
-            </button>
+              </thead>
+              <tbody>
+                {paginated.map((event) => (
+                  <tr
+                    key={event.id}
+                    className="border-b border-slate-50 hover:bg-slate-50 transition-colors"
+                  >
+                    <td className="py-3 pr-4 font-medium text-slate-900">
+                      <div className="flex items-center gap-2">
+                        {event.website ? (
+                          <a
+                            href={event.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:text-emerald-600 underline underline-offset-2"
+                          >
+                            {event.name}
+                          </a>
+                        ) : (
+                          event.name
+                        )}
+                        {event.stravaUrl && (
+                          <a
+                            href={event.stravaUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="View on Strava"
+                            className="shrink-0 text-[#FC4C02] hover:opacity-75 transition-opacity"
+                          >
+                            <StravaIcon className="w-4 h-4" />
+                          </a>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 pr-4">
+                      <EventBadge event={event} />
+                    </td>
+                    <td className="py-3 pr-4 text-slate-600">
+                      {formatLocation(event)}
+                    </td>
+                    <td className="py-3 pr-4 text-slate-600">
+                      <div className="flex items-center gap-2">
+                        {formatDate(
+                          status === "finished"
+                            ? (event.finishedDate ?? event.plannedDate)
+                            : event.plannedDate,
+                        )}
+                        {status === "planned" &&
+                          (() => {
+                            const t = timeUntil(event.plannedDate);
+                            return (
+                              <span
+                                className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold tracking-wide ${t.bgClass} ${t.textColorClass}`}
+                              >
+                                {t.text}
+                              </span>
+                            );
+                          })()}
+                      </div>
+                    </td>
+                    {status === "finished" && (
+                      <td className="py-3 pr-4 font-mono text-slate-700">
+                        {formatTime(event.finishedTime)}
+                      </td>
+                    )}
+                    <td className="py-3 pr-4 font-mono text-slate-400">
+                      {formatTime(event.goalFinishTime)}
+                    </td>
+                    <td className="py-3">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => onEdit(event)}
+                          className="text-xs text-slate-500 hover:text-emerald-600 transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Delete "${event.name}"?`))
+                              deleteEvent.mutate(event.id);
+                          }}
+                          className="text-xs text-slate-400 hover:text-red-500 transition-colors"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-end gap-3 mt-4 pt-3 border-t border-slate-100">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-2 py-1 text-xs text-slate-500 hover:text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                ← Prev
+              </button>
+              <span className="text-xs text-slate-400 tabular-nums">
+                {page} / {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="px-2 py-1 text-xs text-slate-500 hover:text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                Next →
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>

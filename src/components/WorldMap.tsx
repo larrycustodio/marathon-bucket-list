@@ -94,11 +94,11 @@ function buildStats(events: MarathonEvent[]) {
   return { half, full, other };
 }
 
-const BG = '#dbeafe';
+const BG = '#f1f5f9';
 const FINISHED_COLOR = '#16a34a';
 const PLANNED_COLOR = '#4ade80';
-const DEFAULT_COLOR = '#93c5fd';
-const STROKE = '#dbeafe';
+const DEFAULT_COLOR = '#cbd5e1';
+const STROKE = '#f8fafc';
 
 interface Props {
   width: number;

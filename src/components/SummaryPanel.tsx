@@ -1,5 +1,6 @@
 import type { MarathonEvent } from "../types";
 import { timeUntil } from "../utils/timeUntil";
+import EventBadge from "./EventBadge";
 import SummaryWidget from "./SummaryWidget";
 
 interface Props {
@@ -130,8 +131,11 @@ export default function SummaryPanel({ events, finished, planned }: Props) {
             <div className="text-[10px] text-slate-400 uppercase tracking-widest font-medium mb-2">
               Next up
             </div>
-            <div className="font-semibold text-slate-900 text-sm leading-snug">
-              {nextEvent.name}
+            <div className="flex items-center gap-2">
+              <div className="font-semibold text-slate-900 text-sm leading-snug">
+                {nextEvent.name}
+              </div>
+              <EventBadge event={nextEvent} />
             </div>
             <div className="text-xs text-slate-500 mt-0.5">
               {nextEvent.state && nextEvent.state !== "—"
