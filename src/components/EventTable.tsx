@@ -22,7 +22,7 @@ function formatEventType(event: MarathonEvent): string {
       ? `${event.customDistance} ${event.customDistanceUnit ?? 'mi'}`
       : 'Other';
   }
-  return event.eventType === 'full' ? 'Full' : 'Half';
+  return event.eventType === 'full' ? '26.2' : '13.1';
 }
 
 function typeBadgeClass(event: MarathonEvent): string {
@@ -39,6 +39,12 @@ function formatDate(d?: string) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
+
+const FILTER_LABELS: Record<string, string> = {
+  half: 'Half Marathon',
+  full: 'Marathon',
+  other: 'Other',
+};
 
 function formatLocation(event: MarathonEvent) {
   if (event.state === '—' || !event.state) {
@@ -89,25 +95,48 @@ export default function EventTable({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
         <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Search name, state, country..."
-            value={search}
-            onChange={e => onSearchChange(e.target.value)}
-            className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search name, state, country..."
+              value={search}
+              onChange={e => onSearchChange(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-1.5 pr-7 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+            {search && (
+              <button
+                onClick={() => onSearchChange('')}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors leading-none text-base"
+              >
+                ×
+              </button>
+            )}
+          </div>
           <select
             value={typeFilter}
             onChange={e => onTypeFilterChange(e.target.value as EventTypeFilter)}
             className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             <option value="all">Filter by Distance</option>
-            <option value="half">Half</option>
-            <option value="full">Full</option>
+            <option value="half">Half Marathon</option>
+            <option value="full">Marathon</option>
             <option value="other">Other</option>
           </select>
         </div>
       </div>
+
+      {typeFilter !== 'all' && (
+        <div className="flex items-center gap-2 -mt-2 mb-3">
+          <button
+            onClick={() => onTypeFilterChange('all')}
+            className="group flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+          >
+            {FILTER_LABELS[typeFilter]}
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-500 leading-none">✕</span>
+          </button>
+        </div>
+      )}
 
       {sorted.length === 0 ? (
         <p className="text-slate-400 text-sm text-center py-8">No events yet.</p>
