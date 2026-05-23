@@ -94,7 +94,8 @@ export default function EventForm({ editTarget, onClose }: Props) {
     if (!raceDate) errs.plannedDate = 'Required';
     if (!form.city.trim()) errs.city = 'Required';
     if (!form.state.trim()) errs.state = 'Required';
-    if (!form.country.trim()) errs.country = 'Required';
+    if (form.state === '—' && !form.country.trim()) errs.country = 'Required for international events';
+    else if (!form.country.trim()) errs.country = 'Required';
     return errs;
   }
 
@@ -159,7 +160,7 @@ export default function EventForm({ editTarget, onClose }: Props) {
               className={`${FIELD} border-slate-200`}
             >
               <option value="half">Half Marathon</option>
-              <option value="full">Full Marathon</option>
+              <option value="full">Marathon</option>
             </select>
           </div>
 
@@ -218,22 +219,54 @@ export default function EventForm({ editTarget, onClose }: Props) {
             {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
           </div>
 
-          {/* State */}
+          {/* State / Province */}
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">State *</label>
-            <select
-              value={form.state}
-              onChange={e => set('state', e.target.value)}
-              className={`${FIELD} ${errors.state ? 'border-red-400' : 'border-slate-200'}`}
-            >
-              {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-              <option value="—">International (—)</option>
-            </select>
+            {form.state === '—' ? (
+              <>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  State / Province
+                  <span className="ml-1 text-slate-400 font-normal">(optional)</span>
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    value="—"
+                    onChange={e => set('state', e.target.value)}
+                    className={`${FIELD} border-slate-200 w-auto`}
+                  >
+                    <option value="—">🌍 Intl.</option>
+                    {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <input
+                    type="text"
+                    value={form.state === '—' ? '' : form.state}
+                    onChange={e => set('state', e.target.value || '—')}
+                    placeholder="Province / Region"
+                    className={`${FIELD} border-slate-200 flex-1`}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <label className="block text-xs font-medium text-slate-600 mb-1">State *</label>
+                <select
+                  value={form.state}
+                  onChange={e => set('state', e.target.value)}
+                  className={`${FIELD} ${errors.state ? 'border-red-400' : 'border-slate-200'}`}
+                >
+                  <option value="—">🌍 International</option>
+                  <option disabled>──────────</option>
+                  {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                {errors.state && <p className="text-red-500 text-xs mt-1">{errors.state}</p>}
+              </>
+            )}
           </div>
 
           {/* Country */}
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Country *</label>
+            <label className="block text-xs font-medium text-slate-600 mb-1">
+              Country {form.state === '—' ? '*' : ''}
+            </label>
             <input
               type="text"
               value={form.country}

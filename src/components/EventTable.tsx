@@ -27,6 +27,13 @@ function formatDate(d?: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+function formatLocation(event: MarathonEvent) {
+  if (event.state === '—' || !event.state) {
+    return `${event.city}, ${event.country}`;
+  }
+  return `${event.city}, ${event.state}`;
+}
+
 export default function EventTable({
   events, title, status,
   search, onSearchChange,
@@ -42,7 +49,8 @@ export default function EventTable({
         !q ||
         e.name.toLowerCase().includes(q) ||
         e.state.toLowerCase().includes(q) ||
-        e.city.toLowerCase().includes(q);
+        e.city.toLowerCase().includes(q) ||
+        e.country.toLowerCase().includes(q);
       const matchesType = typeFilter === 'all' || e.eventType === typeFilter;
       return matchesSearch && matchesType;
     });
@@ -63,10 +71,10 @@ export default function EventTable({
         <div className="flex gap-2">
           <input
             type="text"
-            placeholder="Search name, state..."
+            placeholder="Search name, state, country..."
             value={search}
             onChange={e => onSearchChange(e.target.value)}
-            className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm w-48 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
           <select
             value={typeFilter}
@@ -92,7 +100,7 @@ export default function EventTable({
                 <th className="pb-2 pr-4 font-medium">Location</th>
                 <th className="pb-2 pr-4 font-medium">{status === 'finished' ? 'Date' : 'Planned'}</th>
                 {status === 'finished' && <th className="pb-2 pr-4 font-medium">Time</th>}
-                {status === 'finished' && <th className="pb-2 pr-4 font-medium">Goal</th>}
+                <th className="pb-2 pr-4 font-medium">Goal</th>
                 <th className="pb-2 font-medium">Actions</th>
               </tr>
             </thead>
@@ -128,7 +136,7 @@ export default function EventTable({
                       {TYPE_LABELS[event.eventType]}
                     </span>
                   </td>
-                  <td className="py-3 pr-4 text-slate-600">{event.city}, {event.state}</td>
+                  <td className="py-3 pr-4 text-slate-600">{formatLocation(event)}</td>
                   <td className="py-3 pr-4 text-slate-600">
                     <div className="flex items-center gap-2">
                       {formatDate(status === 'finished' ? (event.finishedDate ?? event.plannedDate) : event.plannedDate)}
@@ -145,9 +153,7 @@ export default function EventTable({
                   {status === 'finished' && (
                     <td className="py-3 pr-4 font-mono text-slate-700">{formatTime(event.finishedTime)}</td>
                   )}
-                  {status === 'finished' && (
-                    <td className="py-3 pr-4 font-mono text-slate-400">{formatTime(event.goalFinishTime)}</td>
-                  )}
+                  <td className="py-3 pr-4 font-mono text-slate-400">{formatTime(event.goalFinishTime)}</td>
                   <td className="py-3">
                     <div className="flex gap-2">
                       <button
