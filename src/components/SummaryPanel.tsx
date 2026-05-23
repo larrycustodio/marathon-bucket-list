@@ -68,7 +68,7 @@ export default function SummaryPanel({ events, finished, planned }: Props) {
         </div>
         <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
           <span>
-            {statesCovered} state{statesCovered !== 1 ? "s" : ""}
+            {statesCovered} US state{statesCovered !== 1 ? "s" : ""}
           </span>
           <span>
             {new Set(events.map((e) => e.country)).size} countr

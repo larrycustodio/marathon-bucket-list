@@ -100,10 +100,10 @@ export default function EventTable({
           <div className="relative">
             <input
               type="text"
-              placeholder="Search name, state, country..."
+              placeholder="Search by name, state, country..."
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="border border-slate-200 rounded-lg px-3 py-1.5 pr-7 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="border border-slate-200 rounded-lg px-3 py-1.5 pr-7 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
             {search && (
               <button
@@ -122,8 +122,10 @@ export default function EventTable({
             }
             className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
-            <option value="all">Filter by Distance</option>
-            <option value="half">Half Marathon</option>
+            <option value="all" disabled>
+              Filter by Distance
+            </option>
+            <option value="half" >Half Marathon</option>
             <option value="full">Marathon</option>
             <option value="other">Other</option>
           </select>
@@ -134,10 +136,10 @@ export default function EventTable({
         <div className="flex items-center gap-2 -mt-2 mb-3">
           <button
             onClick={() => onTypeFilterChange("all")}
-            className="group flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+            className="group cursor-pointer flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
           >
             {FILTER_LABELS[typeFilter]}
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-500 leading-none">
+            <span className=" group-hover:opacity-100 transition-opacity text-emerald-500 leading-none">
               ✕
             </span>
           </button>
@@ -193,7 +195,7 @@ export default function EventTable({
                             target="_blank"
                             rel="noopener noreferrer"
                             title="View on Strava"
-                            className="shrink-0 text-[#FC4C02] hover:opacity-75 transition-opacity"
+                            className="shrink-0 hover:opacity-50 transition-opacity"
                           >
                             <StravaIcon className="w-4 h-4" />
                           </a>

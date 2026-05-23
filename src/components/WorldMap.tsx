@@ -75,6 +75,8 @@ const CONTINENT_MAP: Record<string, string> = {
   // Oceania
   'australia': 'Oceania', 'new zealand': 'Oceania', 'papua new guinea': 'Oceania',
   'papua n.g.': 'Oceania', 'fiji': 'Oceania', 'solomon is.': 'Oceania',
+  // Arctic/Antarctic
+  'fr. s. antarctic lands': 'Antarctica', 'antartica': 'Antarctica',
 };
 
 function getContinent(name: string): string {

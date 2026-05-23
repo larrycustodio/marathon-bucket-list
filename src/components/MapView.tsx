@@ -30,12 +30,12 @@ export default function MapView({ events, tab, onTabChange }: Props) {
     return () => ro.disconnect();
   }, []);
 
-  const height = tab === 'usa' ? Math.round(width * 0.58) : Math.round(width * 0.52);
+  const height = Math.round(width * 0.65);
 
   const legend = [
     { color: '#16a34a', label: 'Finished' },
     { color: '#4ade80', label: 'Planned' },
-    { color: tab === 'usa' ? '#cbd5e1' : '#93c5fd', label: 'Not yet' },
+    { color: '#cbd5e1', label: 'Not yet' },
   ];
 
   return (
