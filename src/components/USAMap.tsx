@@ -13,14 +13,12 @@ interface FeatureShape {
   properties: { name: string };
 }
 
-// @ts-expect-error topojson typing
-const { features: unitedStates } = topojson.feature(
+// JSON imports type `topology.type` as `string`; cast to satisfy topojson-client overloads
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const { features: unitedStates } = (topojson.feature as any)(
   topology,
   topology.objects.states,
-) as {
-  type: "FeatureCollection";
-  features: FeatureShape[];
-};
+) as { type: "FeatureCollection"; features: FeatureShape[] };
 
 const coordOffsets: Record<string, number[]> = {
   FL: [11, 3],
