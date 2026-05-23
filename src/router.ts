@@ -4,7 +4,7 @@ import React from 'react';
 import Dashboard from './components/Dashboard';
 
 export type MapTab = 'usa' | 'world';
-export type EventTypeFilter = 'all' | 'half' | 'full';
+export type EventTypeFilter = 'all' | 'half' | 'full' | 'other';
 
 export interface SearchParams {
   tab?: MapTab;
@@ -31,9 +31,9 @@ export const indexRoute = createRoute({
     tab: raw.tab === 'world' ? 'world' : raw.tab === 'usa' ? 'usa' : undefined,
     state: typeof raw.state === 'string' && raw.state ? raw.state : undefined,
     fs: typeof raw.fs === 'string' && raw.fs ? raw.fs : undefined,
-    ff: raw.ff === 'half' || raw.ff === 'full' || raw.ff === 'all' ? raw.ff : undefined,
+    ff: raw.ff === 'half' || raw.ff === 'full' || raw.ff === 'other' || raw.ff === 'all' ? raw.ff : undefined,
     ps: typeof raw.ps === 'string' && raw.ps ? raw.ps : undefined,
-    pf: raw.pf === 'half' || raw.pf === 'full' || raw.pf === 'all' ? raw.pf : undefined,
+    pf: raw.pf === 'half' || raw.pf === 'full' || raw.pf === 'other' || raw.pf === 'all' ? raw.pf : undefined,
   }),
   component: Dashboard,
 });

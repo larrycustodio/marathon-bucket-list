@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { MarathonEvent, EventType, EventStatus } from '../types';
+import type { MarathonEvent, EventStatus } from '../types';
 import type { EventTypeFilter } from '../router';
 import { useDeleteEvent } from '../hooks/useEvents';
 import { timeUntil } from '../utils/timeUntil';
@@ -16,7 +16,20 @@ interface Props {
   onEdit: (event: MarathonEvent) => void;
 }
 
-const TYPE_LABELS: Record<EventType, string> = { half: 'Half', full: 'Full' };
+function formatEventType(event: MarathonEvent): string {
+  if (event.eventType === 'other') {
+    return event.customDistance != null
+      ? `${event.customDistance} ${event.customDistanceUnit ?? 'mi'}`
+      : 'Other';
+  }
+  return event.eventType === 'full' ? 'Full' : 'Half';
+}
+
+function typeBadgeClass(event: MarathonEvent): string {
+  if (event.eventType === 'full') return 'bg-purple-100 text-purple-700';
+  if (event.eventType === 'half') return 'bg-blue-100 text-blue-700';
+  return 'bg-slate-100 text-slate-600';
+}
 
 function formatTime(t?: string) {
   return t ?? '—';
@@ -84,6 +97,7 @@ export default function EventTable({
             <option value="all">All types</option>
             <option value="half">Half</option>
             <option value="full">Full</option>
+            <option value="other">Other</option>
           </select>
         </div>
       </div>
@@ -128,12 +142,8 @@ export default function EventTable({
                     </div>
                   </td>
                   <td className="py-3 pr-4">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      event.eventType === 'full'
-                        ? 'bg-purple-100 text-purple-700'
-                        : 'bg-blue-100 text-blue-700'
-                    }`}>
-                      {TYPE_LABELS[event.eventType]}
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${typeBadgeClass(event)}`}>
+                      {formatEventType(event)}
                     </span>
                   </td>
                   <td className="py-3 pr-4 text-slate-600">{formatLocation(event)}</td>

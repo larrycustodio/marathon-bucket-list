@@ -1,4 +1,5 @@
-export type EventType = 'half' | 'full';
+export type EventType = 'half' | 'full' | 'other';
+export type DistanceUnit = 'mi' | 'km';
 export type EventStatus = 'planned' | 'finished';
 
 export interface MarathonEvent {
@@ -12,6 +13,8 @@ export interface MarathonEvent {
   city: string;
   state: string;
   country: string;
+  customDistance?: number;
+  customDistanceUnit?: DistanceUnit;
   website?: string;
   stravaUrl?: string;
   status: EventStatus;
@@ -29,6 +32,8 @@ export interface MarathonEventInput {
   city: string;
   state: string;
   country: string;
+  customDistance?: number;
+  customDistanceUnit?: DistanceUnit;
   website?: string;
   stravaUrl?: string;
 }

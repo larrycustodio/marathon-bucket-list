@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
-import type { MarathonEvent, MarathonEventInput, EventType } from '../types';
+import type { MarathonEvent, MarathonEventInput, EventType, DistanceUnit } from '../types';
 import { useCreateEvent, useUpdateEvent } from '../hooks/useEvents';
 import MarathonTimeInput from './MarathonTimeInput';
 import StravaIcon from './StravaIcon';
@@ -58,6 +58,8 @@ export default function EventForm({ editTarget, onClose }: Props) {
         plannedDate: editTarget.plannedDate,
         finishedTime: editTarget.finishedTime,
         goalFinishTime: editTarget.goalFinishTime,
+        customDistance: editTarget.customDistance,
+        customDistanceUnit: editTarget.customDistanceUnit,
         city: editTarget.city,
         state: editTarget.state,
         country: editTarget.country,
@@ -92,6 +94,9 @@ export default function EventForm({ editTarget, onClose }: Props) {
     const errs: typeof errors = {};
     if (!form.name.trim()) errs.name = 'Required';
     if (!raceDate) errs.plannedDate = 'Required';
+    if (form.eventType === 'other' && (form.customDistance == null || isNaN(form.customDistance))) {
+      errs.customDistance = 'Required';
+    }
     if (!form.city.trim()) errs.city = 'Required';
     if (!form.state.trim()) errs.state = 'Required';
     if (form.state === '—' && !form.country.trim()) errs.country = 'Required for international events';
@@ -161,8 +166,39 @@ export default function EventForm({ editTarget, onClose }: Props) {
             >
               <option value="half">Half Marathon</option>
               <option value="full">Marathon</option>
+              <option value="other">Other</option>
             </select>
           </div>
+
+          {/* Custom Distance — only for "other" */}
+          {form.eventType === 'other' && (
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Distance *</label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.customDistance ?? ''}
+                  onChange={e => {
+                    const v = e.target.value;
+                    set('customDistance', v === '' ? undefined : parseFloat(parseFloat(v).toFixed(2)));
+                  }}
+                  placeholder="0.00"
+                  className={`${FIELD} flex-1 ${errors.customDistance ? 'border-red-400' : 'border-slate-200'}`}
+                />
+                <select
+                  value={form.customDistanceUnit ?? 'mi'}
+                  onChange={e => set('customDistanceUnit', e.target.value as DistanceUnit)}
+                  className={`${FIELD} border-slate-200 w-auto`}
+                >
+                  <option value="mi">mi</option>
+                  <option value="km">km</option>
+                </select>
+              </div>
+              {errors.customDistance && <p className="text-red-500 text-xs mt-1">{errors.customDistance}</p>}
+            </div>
+          )}
 
           {/* Race Date */}
           <div>
