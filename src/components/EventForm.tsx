@@ -3,6 +3,7 @@ import DatePicker from 'react-datepicker';
 import type { MarathonEvent, MarathonEventInput, EventType } from '../types';
 import { useCreateEvent, useUpdateEvent } from '../hooks/useEvents';
 import MarathonTimeInput from './MarathonTimeInput';
+import StravaIcon from './StravaIcon';
 
 const US_STATES = [
   'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
@@ -61,6 +62,7 @@ export default function EventForm({ editTarget, onClose }: Props) {
         state: editTarget.state,
         country: editTarget.country,
         website: editTarget.website,
+        stravaUrl: editTarget.stravaUrl,
       });
       setRaceDate(toDateOrNull(editTarget.plannedDate));
     } else {
@@ -249,6 +251,21 @@ export default function EventForm({ editTarget, onClose }: Props) {
               value={form.website ?? ''}
               onChange={e => set('website', e.target.value || undefined)}
               placeholder="https://..."
+              className={`${FIELD} border-slate-200`}
+            />
+          </div>
+
+          {/* Strava */}
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1 flex items-center gap-1.5">
+              <StravaIcon className="w-3.5 h-3.5" />
+              Strava Activity
+            </label>
+            <input
+              type="url"
+              value={form.stravaUrl ?? ''}
+              onChange={e => set('stravaUrl', e.target.value || undefined)}
+              placeholder="https://www.strava.com/activities/..."
               className={`${FIELD} border-slate-200`}
             />
           </div>

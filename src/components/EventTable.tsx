@@ -3,6 +3,7 @@ import type { MarathonEvent, EventType, EventStatus } from '../types';
 import type { EventTypeFilter } from '../router';
 import { useDeleteEvent } from '../hooks/useEvents';
 import { timeUntil } from '../utils/timeUntil';
+import StravaIcon from './StravaIcon';
 
 interface Props {
   events: MarathonEvent[];
@@ -99,11 +100,24 @@ export default function EventTable({
               {sorted.map(event => (
                 <tr key={event.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                   <td className="py-3 pr-4 font-medium text-slate-900">
-                    {event.website ? (
-                      <a href={event.website} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-600 underline underline-offset-2">
-                        {event.name}
-                      </a>
-                    ) : event.name}
+                    <div className="flex items-center gap-2">
+                      {event.website ? (
+                        <a href={event.website} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-600 underline underline-offset-2">
+                          {event.name}
+                        </a>
+                      ) : event.name}
+                      {event.stravaUrl && (
+                        <a
+                          href={event.stravaUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="View on Strava"
+                          className="shrink-0 text-[#FC4C02] hover:opacity-75 transition-opacity"
+                        >
+                          <StravaIcon className="w-4 h-4" />
+                        </a>
+                      )}
+                    </div>
                   </td>
                   <td className="py-3 pr-4">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${

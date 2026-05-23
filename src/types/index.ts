@@ -13,6 +13,7 @@ export interface MarathonEvent {
   state: string;
   country: string;
   website?: string;
+  stravaUrl?: string;
   status: EventStatus;
   createdAt: string;
   updatedAt: string;
@@ -29,4 +30,5 @@ export interface MarathonEventInput {
   state: string;
   country: string;
   website?: string;
+  stravaUrl?: string;
 }
