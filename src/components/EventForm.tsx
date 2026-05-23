@@ -185,7 +185,7 @@ export default function EventForm({ editTarget, onClose }: Props) {
                     set('customDistance', v === '' ? undefined : parseFloat(parseFloat(v).toFixed(2)));
                   }}
                   placeholder="0.00"
-                  className={`${FIELD} flex-1 ${errors.customDistance ? 'border-red-400' : 'border-slate-200'}`}
+                  className={`${FIELD} flex-1 min-w-[80px] ${errors.customDistance ? 'border-red-400' : 'border-slate-200'}`}
                 />
                 <select
                   value={form.customDistanceUnit ?? 'mi'}
@@ -205,7 +205,7 @@ export default function EventForm({ editTarget, onClose }: Props) {
             <label className="block text-xs font-medium text-slate-600 mb-1">
               Race Date *
               {raceDate && (
-                <span className={`ml-2 font-normal ${isCompleted ? 'text-emerald-600' : 'text-amber-600'}`}>
+                <span className={`ml-2 font-normal ${isCompleted ? 'text-emerald-600' : 'text-green-400'}`}>
                   {isCompleted ? '— completed' : '— upcoming'}
                 </span>
               )}

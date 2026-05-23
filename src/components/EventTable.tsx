@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import type { MarathonEvent, EventStatus } from '../types';
 import type { EventTypeFilter } from '../router';
 import { useDeleteEvent } from '../hooks/useEvents';
@@ -54,6 +54,9 @@ export default function EventTable({
   onEdit,
 }: Props) {
   const deleteEvent = useDeleteEvent();
+  const [page, setPage] = useState(1);
+
+  useEffect(() => { setPage(1); }, [search, typeFilter]);
 
   const filtered = useMemo(() => {
     return events.filter(e => {
@@ -77,6 +80,10 @@ export default function EventTable({
     });
   }, [filtered, status]);
 
+  const PAGE_SIZE = 10;
+  const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
+  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   return (
     <div className="bg-white rounded-[4px] shadow-[0_8px_24px_rgba(13,13,18,0.04)] mb-3 relative p-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
@@ -94,7 +101,7 @@ export default function EventTable({
             onChange={e => onTypeFilterChange(e.target.value as EventTypeFilter)}
             className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
-            <option value="all">All types</option>
+            <option value="all">Filter by Distance</option>
             <option value="half">Half</option>
             <option value="full">Full</option>
             <option value="other">Other</option>
@@ -105,6 +112,7 @@ export default function EventTable({
       {sorted.length === 0 ? (
         <p className="text-slate-400 text-sm text-center py-8">No events yet.</p>
       ) : (
+        <>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -119,7 +127,7 @@ export default function EventTable({
               </tr>
             </thead>
             <tbody>
-              {sorted.map(event => (
+              {paginated.map(event => (
                 <tr key={event.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                   <td className="py-3 pr-4 font-medium text-slate-900">
                     <div className="flex items-center gap-2">
@@ -187,6 +195,26 @@ export default function EventTable({
             </tbody>
           </table>
         </div>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-end gap-3 mt-4 pt-3 border-t border-slate-100">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-2 py-1 text-xs text-slate-500 hover:text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              ← Prev
+            </button>
+            <span className="text-xs text-slate-400 tabular-nums">{page} / {totalPages}</span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-2 py-1 text-xs text-slate-500 hover:text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              Next →
+            </button>
+          </div>
+        )}
+        </>
       )}
     </div>
   );

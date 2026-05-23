@@ -34,7 +34,7 @@ export default function MapView({ events, tab, onTabChange }: Props) {
 
   const legend = [
     { color: '#16a34a', label: 'Finished' },
-    { color: '#ca8a04', label: 'Planned' },
+    { color: '#4ade80', label: 'Planned' },
     { color: tab === 'usa' ? '#cbd5e1' : '#93c5fd', label: 'Not yet' },
   ];
 

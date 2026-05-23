@@ -26,8 +26,10 @@ export function timeUntil(dateStr: string): TimeUntilResult {
   } else if (diffDays < 365) {
     text = `${Math.round(diffDays / 30.44)}mo`;
   } else {
-    const yrs = diffDays / 365.25;
-    text = `${yrs < 1.5 ? '1' : Math.round(yrs)}y`;
+    const totalMonths = Math.round(diffDays / 30.44);
+    const yrs = Math.floor(totalMonths / 12);
+    const mos = totalMonths % 12;
+    text = mos > 0 ? `${yrs}y ${mos}mo` : `${yrs}y`;
   }
 
   if (diffDays < 28) {

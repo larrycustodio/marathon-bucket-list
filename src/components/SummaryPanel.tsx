@@ -101,7 +101,11 @@ export default function SummaryPanel({ events, finished, planned }: Props) {
           <div className="pt-3 border-t border-slate-100">
             <div className="text-[10px] text-slate-400 uppercase tracking-widest font-medium mb-2">Next up</div>
             <div className="font-semibold text-slate-900 text-sm leading-snug">{nextEvent.name}</div>
-            <div className="text-xs text-slate-500 mt-0.5">{nextEvent.city}, {nextEvent.state}</div>
+            <div className="text-xs text-slate-500 mt-0.5">
+              {nextEvent.state && nextEvent.state !== '—'
+                ? `${nextEvent.city}, ${nextEvent.state}`
+                : `${nextEvent.city}, ${nextEvent.country}`}
+            </div>
             <div className="flex items-center gap-2 mt-2">
               <span className="text-xs text-slate-500">{formatDate(nextEvent.plannedDate)}</span>
               {(() => {
