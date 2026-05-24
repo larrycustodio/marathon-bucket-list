@@ -56,7 +56,7 @@ interface MarathonEvent {
 
   // location
   name:    string;
-  city:    string;
+  city?:    string;
   state:   string;   // US state abbreviation (e.g. "CA") or "—" for international events
   country: string;   // full country name (e.g. "United States")
 
@@ -147,7 +147,7 @@ create table public.marathon_events (
 
   -- event info
   name     text not null,
-  city     text not null,
+  city     text,
   state    text not null,            -- "—" for international
   country  text not null,
   website  text,

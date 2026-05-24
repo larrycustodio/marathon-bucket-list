@@ -10,7 +10,7 @@ export interface MarathonEvent {
   finishedDate?: string;
   finishedTime?: string; // e.g. "3:45:22"
   goalFinishTime?: string;
-  city: string;
+  city?: string;
   state: string;
   country: string;
   customDistance?: number;
@@ -29,7 +29,7 @@ export interface MarathonEventInput {
   finishedDate?: string;
   finishedTime?: string;
   goalFinishTime?: string;
-  city: string;
+  city?: string;
   state: string;
   country: string;
   customDistance?: number;
