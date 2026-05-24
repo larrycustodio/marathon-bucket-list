@@ -18,7 +18,7 @@ A personal race-tracking app for logging and planning half-marathons, full marat
 | Server state | TanStack Query v5 |
 | Maps | @visx/geo (AlbersUsa + Mercator) |
 | Storage (current) | Browser IndexedDB via native API |
-| Storage (target) | Supabase (Postgres + JS client) |
+| Storage (target) | Supabase (Postgres + Go client) |
 
 ---
 
