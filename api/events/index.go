@@ -23,13 +23,11 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client, err := newClient()
-	if err != nil {
-		jsonError(w, "failed to initialize db client", http.StatusInternalServerError)
-		return
+	client, userID, ok := resolveClient(w, r)
+	if !ok {
+		return // resolveClient already wrote the error response
 	}
 
-	userID := os.Getenv("SUPABASE_USER_ID")
 	w.Header().Set("Content-Type", "application/json")
 
 	switch r.Method {
@@ -40,6 +38,49 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	default:
 		jsonError(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+// resolveClient authenticates the request and returns the appropriate Supabase
+// client plus the acting user's ID.
+//
+//   - Production: expects Authorization: Bearer <supabase_jwt>. Creates a
+//     user-scoped client so RLS enforces data isolation automatically.
+//     userID is extracted from the JWT "sub" claim and passed to INSERT payloads.
+//
+//   - Dev fallback: if no token is present AND SUPABASE_USER_ID is set in the
+//     environment, the service-role client is used with the hardcoded user ID.
+//     This lets curl/Postman testing work locally without a real session.
+//     SUPABASE_USER_ID must NOT be set in production Vercel env vars.
+func resolveClient(w http.ResponseWriter, r *http.Request) (*supabase.Client, string, bool) {
+	token := shared.ExtractToken(r)
+
+	if token != "" {
+		userID, err := shared.ExtractUserID(token)
+		if err != nil {
+			jsonError(w, "invalid token: "+err.Error(), http.StatusUnauthorized)
+			return nil, "", false
+		}
+		client, err := shared.NewClientWithToken(token)
+		if err != nil {
+			jsonError(w, "failed to initialize db client", http.StatusInternalServerError)
+			return nil, "", false
+		}
+		return client, userID, true
+	}
+
+	// Dev fallback
+	devUserID := os.Getenv("SUPABASE_USER_ID")
+	if devUserID != "" {
+		client, err := shared.NewServiceClient()
+		if err != nil {
+			jsonError(w, "failed to initialize db client", http.StatusInternalServerError)
+			return nil, "", false
+		}
+		return client, devUserID, true
+	}
+
+	jsonError(w, "unauthorized", http.StatusUnauthorized)
+	return nil, "", false
 }
 
 // handleList — GET /api/events
@@ -58,9 +99,13 @@ func handleList(w http.ResponseWriter, r *http.Request, client *supabase.Client,
 		limit = 1000
 	}
 
-	fb := client.From("marathon_events").
-		Select("*", "exact", false).
-		Eq("user_id", userID)
+	// When using the user JWT client, RLS (auth.uid() = user_id) scopes the
+	// query automatically — no explicit user_id filter needed.
+	// In dev fallback mode (service-role client), filter explicitly by userID.
+	fb := client.From("marathon_events").Select("*", "exact", false)
+	if os.Getenv("SUPABASE_USER_ID") != "" && shared.ExtractToken(r) == "" {
+		fb = fb.Eq("user_id", userID) // dev fallback: explicit filter
+	}
 
 	if q != "" {
 		escaped := strings.ReplaceAll(q, "%", `\%`)
@@ -152,14 +197,6 @@ func handleCreate(w http.ResponseWriter, r *http.Request, client *supabase.Clien
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-func newClient() (*supabase.Client, error) {
-	return supabase.NewClient(
-		os.Getenv("SUPABASE_URL"),
-		os.Getenv("SUPABASE_SERVICE_ROLE_KEY"),
-		nil,
-	)
-}
 
 func setCORSHeaders(w http.ResponseWriter, r *http.Request) {
 	origin := r.Header.Get("Origin")

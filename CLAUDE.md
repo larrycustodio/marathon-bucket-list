@@ -2,9 +2,7 @@
 
 ## Project Overview
 
-A personal race-tracking app for logging and planning half-marathons, full marathons, and custom-distance running events. Single-user, no auth in the current build. Data lives in browser IndexedDB.
-
-**Goal:** Migrate the storage layer from IndexedDB to Supabase (Postgres) while keeping the React front-end and all business logic unchanged.
+A personal race-tracking app for logging and planning half-marathons, full marathons, and custom-distance running events. Data is stored in Supabase (Postgres), served via Vercel Go serverless functions, and protected by Google OAuth via Supabase Auth.
 
 ---
 
@@ -14,11 +12,11 @@ A personal race-tracking app for logging and planning half-marathons, full marat
 |---|---|
 | UI | React 18 + TypeScript |
 | Styling | Tailwind CSS v4 |
-| Routing | TanStack Router v1 |
+| Routing | TanStack Router v1 (with auth context + `beforeLoad` guards) |
 | Server state | TanStack Query v5 |
 | Maps | @visx/geo (AlbersUsa + Mercator) |
-| Storage (current) | Browser IndexedDB via native API |
-| Storage (target) | Supabase (Postgres + Go client) |
+| Auth | Supabase Auth — Google OAuth (`@supabase/supabase-js`) |
+| Storage | Supabase Postgres via Vercel Go serverless functions |
 
 ---
 
@@ -95,28 +93,30 @@ These rules live in the storage layer and must be preserved in any backend:
 
 ---
 
-## Current Storage Layer — `src/db/index.ts`
+## Storage + API Layer — `src/db/index.ts`
 
-The DB module exposes 5 functions that are the **only** interface the rest of the app uses. Replacing these with Supabase calls requires no changes outside this file.
+The DB module exposes 5 functions that are the **only** interface the rest of the app uses. They call the Vercel Go API under `/api/events` and inject the Supabase session token automatically.
 
 ```typescript
-// Read all events for the current user
+// Read all events for the current user (RLS-scoped)
 getEvents(): Promise<MarathonEvent[]>
 
 // Read a single event by id
 getEvent(id: string): Promise<MarathonEvent | undefined>
 
-// Create a new event; assigns id, status, createdAt, updatedAt
+// Create a new event; server assigns id, status, createdAt, updatedAt
 createEvent(input: MarathonEventInput): Promise<MarathonEvent>
 
-// Update an event by id; re-derives status, updates updatedAt
+// Update an event by id; server re-derives status and updates updatedAt
 updateEvent(id: string, updates: Partial<MarathonEventInput>): Promise<MarathonEvent>
 
 // Hard delete
 deleteEvent(id: string): Promise<void>
 ```
 
-The hooks layer (`src/hooks/useEvents.ts`) wraps these in TanStack Query and handles cache invalidation. **The hooks do not need to change** — only the implementations inside `src/db/index.ts`.
+Each call goes through `apiFetch`, which reads `supabase.auth.getSession()` and attaches `Authorization: Bearer <access_token>`. The Go backend validates the token via PostgREST and RLS handles data isolation automatically.
+
+The hooks layer (`src/hooks/useEvents.ts`) wraps these in TanStack Query and handles cache invalidation. **The hooks do not need to change.**
 
 ---
 
@@ -219,49 +219,18 @@ create policy "owner access"
 
 ---
 
-## Migration Plan for `src/db/index.ts`
-
-Replace the entire file with Supabase client calls. The public interface stays identical.
-
-```typescript
-import { createClient } from '@supabase/supabase-js';
-import type { MarathonEvent, MarathonEventInput } from '../types';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY,
-);
-
-// snake_case DB row → camelCase MarathonEvent
-function fromRow(row: Record<string, unknown>): MarathonEvent { ... }
-
-// camelCase input → snake_case insert payload
-function toRow(input: MarathonEventInput): Record<string, unknown> { ... }
-```
-
-**Required env vars (`.env.local`):**
-```
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
-```
-
-### Auth considerations
-
-The current app has no login screen. For the Supabase backend, decide:
-
-- **Single user (simplest):** Hardcode a single Supabase user. App auto-signs in on load with `supabase.auth.signInWithPassword`. No login UI needed.
-- **Multi-user:** Add an auth page. The `user_id` RLS policy handles data isolation automatically.
-
 ---
 
 ## Key Files Reference
 
 ```
 src/
-  types/index.ts          — MarathonEvent, MarathonEventInput, enums
-  db/index.ts             — REST API client (fetch wrapper; replaces IndexedDB)
-  hooks/useEvents.ts      — TanStack Query hooks (unchanged)
+  lib/
+    supabase.ts           — Supabase JS client singleton (anon key, browser-safe)
+  context/
+    AuthContext.tsx        — AuthProvider + useAuth() hook (session, user, loading, signOut)
   components/
+    LoginPage.tsx         — Google OAuth sign-in page
     EventForm.tsx         — Create/edit form; sends MarathonEventInput
     EventTable.tsx        — Paginated table with search + filter
     Dashboard.tsx         — Root layout, splits events into finished/planned
@@ -271,15 +240,19 @@ src/
     WorldMap.tsx          — World map, hover tooltips grouped by continent
     MapView.tsx           — Tab wrapper for USA/World maps
     MarathonTimeInput.tsx — Masked H:MM:SS time input
+  types/index.ts          — MarathonEvent, MarathonEventInput, enums
+  db/index.ts             — REST API client; injects Bearer token from Supabase session
+  hooks/useEvents.ts      — TanStack Query hooks (unchanged)
+  router.ts               — Routes: /login (public), / (protected); auth context guards
+  main.tsx                — AuthProvider wrapper; passes live session to RouterProvider
 
 api/
   shared/
-    types.go              — Shared Go types: Event, EventInput, DBRow, DBInsert,
-                            DBUpdate, ListResponse + FromRow/ToDBInsert/ToDBUpdate
-                            converters and GenerateID()
+    types.go              — Shared Go types + auth helpers:
+                            ExtractToken, ExtractUserID, NewClientWithToken,
+                            NewServiceClient, FromRow/ToDBInsert/ToDBUpdate, GenerateID
   events/
-    index.go              — GET /api/events (list w/ search, filter, pagination)
-                            POST /api/events (create)
+    index.go              — GET /api/events (list + filters), POST /api/events (create)
     id/
       index.go            — GET /api/events/:id, PATCH /api/events/:id,
                             DELETE /api/events/:id
@@ -297,17 +270,37 @@ vercel.json               — SPA fallback + dynamic route rewrite for Go
 ### Runtime
 
 Go 1.21+, `github.com/supabase-community/supabase-go` v0.0.4 (wraps PostgREST).
-Service-role key bypasses RLS; user is pinned via `SUPABASE_USER_ID` env var.
+
+### Auth flow
+
+Every Go handler calls `resolveClient(w, r)` which:
+
+1. **JWT mode (production):** Reads `Authorization: Bearer <token>` from the request,
+   base64-decodes the JWT payload to extract the `sub` claim (user UUID), then creates
+   a Supabase client with `SUPABASE_ANON_KEY` + the user JWT as the Authorization header.
+   PostgREST validates the signature and sets `auth.uid()` so RLS (`auth.uid() = user_id`)
+   enforces data isolation automatically — no explicit `user_id` filters needed in queries.
+
+2. **Dev fallback (local only):** If no Authorization header is present **and**
+   `SUPABASE_USER_ID` is set in the environment, uses the service-role client with an
+   explicit `Eq("user_id", ...)` filter. Allows `curl`/Postman testing without a real
+   session token. **Must not be set in Vercel production env vars.**
 
 ### Required env vars
 
-Set in `.env.local` (gitignored) and in Vercel project settings:
+Set in `.env.local` (gitignored) for local dev, and in Vercel project settings for production:
 
-| Variable | Description |
-|---|---|
-| `SUPABASE_URL` | Base project URL, e.g. `https://xyz.supabase.co` |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service-role key (Dashboard → Settings → API) |
-| `SUPABASE_USER_ID` | UUID of the single Supabase Auth user |
+| Variable | Where | Description |
+|---|---|---|
+| `SUPABASE_URL` | Server + client | Base project URL, e.g. `https://xyz.supabase.co` |
+| `SUPABASE_ANON_KEY` | Server | Anon/public key — used with user JWTs (PostgREST enforces RLS) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server | Service-role key — dev fallback only; bypasses RLS |
+| `SUPABASE_USER_ID` | Server (dev only) | UUID of a test user; enables unauthenticated curl testing |
+| `VITE_SUPABASE_URL` | Client | Same URL — bundled into the frontend by Vite |
+| `VITE_SUPABASE_ANON_KEY` | Client | Same anon key — bundled into the frontend by Vite |
+
+> **Note:** `SUPABASE_ANON_KEY` and `VITE_SUPABASE_ANON_KEY` hold the same value.
+> The duplicate is required because Vite only exposes `VITE_`-prefixed vars to the browser bundle.
 
 ### Dynamic routing — Go + Vercel constraint
 
@@ -329,6 +322,27 @@ The handler at `api/events/id/index.go` reads the event ID from
 ### Local development
 
 ```bash
-# Fill in .env.local first, then:
-vercel dev        # runs both the Vite frontend and the Go functions on one port
+# 1. Fill in .env.local with all variables above, then:
+vercel dev        # runs the Vite frontend + Go functions on one port (default :3000)
+
+# 2. Open http://localhost:3000 → redirected to /login → "Sign in with Google"
+#    After OAuth, Supabase persists the session to localStorage.
+#    Subsequent vercel dev sessions auto-restore it (no re-login needed for weeks).
+
+# 3. To test the API directly (dev fallback — requires SUPABASE_USER_ID in .env.local):
+curl http://localhost:3000/api/events           # list events
+curl -X POST http://localhost:3000/api/events \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Boston Marathon","eventType":"full","plannedDate":"2025-04-21","state":"MA","country":"United States"}'
 ```
+
+### Frontend auth flow
+
+- `src/lib/supabase.ts` — Supabase JS client singleton (anon key, browser-safe)
+- `src/context/AuthContext.tsx` — `AuthProvider` hydrates session from localStorage on mount;
+  subscribes to `onAuthStateChange` for live updates (token refresh, sign-out)
+- `src/router.ts` — uses `createRootRouteWithContext<RouterContext>()`;
+  `/` route has a `beforeLoad` guard that redirects to `/login` when `!loading && !session`;
+  `/login` route redirects away when already authenticated
+- `src/main.tsx` — `<AuthProvider>` wraps the app; `<App>` reads `useAuth()` and passes
+  live `{ session, loading }` to `<RouterProvider context={...}>` so guards have fresh state

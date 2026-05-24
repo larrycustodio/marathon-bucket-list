@@ -1,5 +1,5 @@
 // Vercel Go handler for GET /api/events/:id, PATCH /api/events/:id,
-// and DELETE /api/events/:id.
+// DELETE /api/events/:id.
 //
 // vercel.json rewrites /api/events/:id → /api/events/id?id=:id so this
 // handler reads the event ID from the "id" query parameter.
@@ -30,13 +30,11 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client, err := newClient()
-	if err != nil {
-		jsonError(w, "failed to initialize db client", http.StatusInternalServerError)
+	client, userID, ok := resolveClient(w, r)
+	if !ok {
 		return
 	}
 
-	userID := os.Getenv("SUPABASE_USER_ID")
 	w.Header().Set("Content-Type", "application/json")
 
 	switch r.Method {
@@ -51,13 +49,52 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// resolveClient mirrors the same logic as the collection handler:
+// user JWT → user-scoped client (RLS enforced by PostgREST), or
+// SUPABASE_USER_ID → service-role dev fallback.
+func resolveClient(w http.ResponseWriter, r *http.Request) (*supabase.Client, string, bool) {
+	token := shared.ExtractToken(r)
+
+	if token != "" {
+		userID, err := shared.ExtractUserID(token)
+		if err != nil {
+			jsonError(w, "invalid token: "+err.Error(), http.StatusUnauthorized)
+			return nil, "", false
+		}
+		client, err := shared.NewClientWithToken(token)
+		if err != nil {
+			jsonError(w, "failed to initialize db client", http.StatusInternalServerError)
+			return nil, "", false
+		}
+		return client, userID, true
+	}
+
+	devUserID := os.Getenv("SUPABASE_USER_ID")
+	if devUserID != "" {
+		client, err := shared.NewServiceClient()
+		if err != nil {
+			jsonError(w, "failed to initialize db client", http.StatusInternalServerError)
+			return nil, "", false
+		}
+		return client, devUserID, true
+	}
+
+	jsonError(w, "unauthorized", http.StatusUnauthorized)
+	return nil, "", false
+}
+
 // handleGet — GET /api/events/:id
 func handleGet(w http.ResponseWriter, client *supabase.Client, userID, id string) {
-	data, _, err := client.From("marathon_events").
+	fb := client.From("marathon_events").
 		Select("*", "exact", false).
-		Eq("id", id).
-		Eq("user_id", userID).
-		Execute()
+		Eq("id", id)
+
+	// In dev fallback mode, scope explicitly; in user-JWT mode RLS does it.
+	if os.Getenv("SUPABASE_USER_ID") != "" {
+		fb = fb.Eq("user_id", userID)
+	}
+
+	data, _, err := fb.Execute()
 	if err != nil {
 		jsonError(w, fmt.Sprintf("db query failed: %v", err), http.StatusInternalServerError)
 		return
@@ -77,11 +114,14 @@ func handleGet(w http.ResponseWriter, client *supabase.Client, userID, id string
 
 // handleUpdate — PATCH /api/events/:id
 func handleUpdate(w http.ResponseWriter, r *http.Request, client *supabase.Client, userID, id string) {
-	check, _, err := client.From("marathon_events").
+	// Existence check (scoped by RLS in JWT mode, explicit filter in dev mode)
+	checkFb := client.From("marathon_events").
 		Select("id", "exact", false).
-		Eq("id", id).
-		Eq("user_id", userID).
-		Execute()
+		Eq("id", id)
+	if os.Getenv("SUPABASE_USER_ID") != "" {
+		checkFb = checkFb.Eq("user_id", userID)
+	}
+	check, _, err := checkFb.Execute()
 	if err != nil {
 		jsonError(w, fmt.Sprintf("db query failed: %v", err), http.StatusInternalServerError)
 		return
@@ -99,11 +139,14 @@ func handleUpdate(w http.ResponseWriter, r *http.Request, client *supabase.Clien
 		return
 	}
 
-	data, _, err := client.From("marathon_events").
+	updateFb := client.From("marathon_events").
 		Update(shared.ToDBUpdate(input), "representation", "exact").
-		Eq("id", id).
-		Eq("user_id", userID).
-		Execute()
+		Eq("id", id)
+	if os.Getenv("SUPABASE_USER_ID") != "" {
+		updateFb = updateFb.Eq("user_id", userID)
+	}
+
+	data, _, err := updateFb.Execute()
 	if err != nil {
 		jsonError(w, fmt.Sprintf("db update failed: %v", err), http.StatusInternalServerError)
 		return
@@ -119,11 +162,13 @@ func handleUpdate(w http.ResponseWriter, r *http.Request, client *supabase.Clien
 
 // handleDelete — DELETE /api/events/:id
 func handleDelete(w http.ResponseWriter, client *supabase.Client, userID, id string) {
-	check, _, err := client.From("marathon_events").
+	checkFb := client.From("marathon_events").
 		Select("id", "exact", false).
-		Eq("id", id).
-		Eq("user_id", userID).
-		Execute()
+		Eq("id", id)
+	if os.Getenv("SUPABASE_USER_ID") != "" {
+		checkFb = checkFb.Eq("user_id", userID)
+	}
+	check, _, err := checkFb.Execute()
 	if err != nil {
 		jsonError(w, fmt.Sprintf("db query failed: %v", err), http.StatusInternalServerError)
 		return
@@ -135,11 +180,14 @@ func handleDelete(w http.ResponseWriter, client *supabase.Client, userID, id str
 		return
 	}
 
-	_, _, err = client.From("marathon_events").
+	deleteFb := client.From("marathon_events").
 		Delete("", "exact").
-		Eq("id", id).
-		Eq("user_id", userID).
-		Execute()
+		Eq("id", id)
+	if os.Getenv("SUPABASE_USER_ID") != "" {
+		deleteFb = deleteFb.Eq("user_id", userID)
+	}
+
+	_, _, err = deleteFb.Execute()
 	if err != nil {
 		jsonError(w, fmt.Sprintf("db delete failed: %v", err), http.StatusInternalServerError)
 		return
@@ -148,14 +196,6 @@ func handleDelete(w http.ResponseWriter, client *supabase.Client, userID, id str
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-func newClient() (*supabase.Client, error) {
-	return supabase.NewClient(
-		os.Getenv("SUPABASE_URL"),
-		os.Getenv("SUPABASE_SERVICE_ROLE_KEY"),
-		nil,
-	)
-}
 
 func setCORSHeaders(w http.ResponseWriter, r *http.Request) {
 	origin := r.Header.Get("Origin")
