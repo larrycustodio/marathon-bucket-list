@@ -5,7 +5,28 @@ info:
     REST API for managing marathon and half-marathon race events.
     All endpoints are Vercel Go serverless functions backed by Supabase (Postgres).
     The frontend replaces its IndexedDB layer with calls to these endpoints.
-  version: 1.0.0
+
+    ## File structure
+
+    ```
+    api/
+      shared/
+        types.go            # shared Go types + camelCase↔snake_case helpers
+      events/
+        index.go            # GET /api/events, POST /api/events
+        id/
+          index.go          # GET/PATCH/DELETE /api/events/:id
+    go.mod
+    swagger.yaml
+    ```
+
+    ## Dynamic routing note
+
+    Go's module system forbids `[` in import paths, so Vercel's `[id]` folder
+    convention cannot be used directly with Go. Instead, `vercel.json` rewrites
+    `/api/events/:id` → `/api/events/id?id=:id`, and the `api/events/id/`
+    handler reads the event ID from the `id` query parameter.
+  version: 1.1.0
 servers:
   - url: /api
     description: Vercel serverless functions (same origin)

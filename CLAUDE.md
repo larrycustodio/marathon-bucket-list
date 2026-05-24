@@ -259,8 +259,8 @@ The current app has no login screen. For the Supabase backend, decide:
 ```
 src/
   types/index.ts          — MarathonEvent, MarathonEventInput, enums
-  db/index.ts             — Storage layer (ONLY file to replace for Supabase)
-  hooks/useEvents.ts      — TanStack Query hooks (no changes needed)
+  db/index.ts             — REST API client (fetch wrapper; replaces IndexedDB)
+  hooks/useEvents.ts      — TanStack Query hooks (unchanged)
   components/
     EventForm.tsx         — Create/edit form; sends MarathonEventInput
     EventTable.tsx        — Paginated table with search + filter
@@ -271,4 +271,64 @@ src/
     WorldMap.tsx          — World map, hover tooltips grouped by continent
     MapView.tsx           — Tab wrapper for USA/World maps
     MarathonTimeInput.tsx — Masked H:MM:SS time input
+
+api/
+  shared/
+    types.go              — Shared Go types: Event, EventInput, DBRow, DBInsert,
+                            DBUpdate, ListResponse + FromRow/ToDBInsert/ToDBUpdate
+                            converters and GenerateID()
+  events/
+    index.go              — GET /api/events (list w/ search, filter, pagination)
+                            POST /api/events (create)
+    id/
+      index.go            — GET /api/events/:id, PATCH /api/events/:id,
+                            DELETE /api/events/:id
+                            (routed via vercel.json rewrite — see Dynamic routing below)
+
+go.mod                    — module marathon-bucket-list; supabase-go v0.0.4
+swagger.yaml              — OpenAPI 3.0 spec for all five endpoints
+vercel.json               — SPA fallback + dynamic route rewrite for Go
+```
+
+---
+
+## Backend — Vercel Go + Supabase
+
+### Runtime
+
+Go 1.21+, `github.com/supabase-community/supabase-go` v0.0.4 (wraps PostgREST).
+Service-role key bypasses RLS; user is pinned via `SUPABASE_USER_ID` env var.
+
+### Required env vars
+
+Set in `.env.local` (gitignored) and in Vercel project settings:
+
+| Variable | Description |
+|---|---|
+| `SUPABASE_URL` | Base project URL, e.g. `https://xyz.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service-role key (Dashboard → Settings → API) |
+| `SUPABASE_USER_ID` | UUID of the single Supabase Auth user |
+
+### Dynamic routing — Go + Vercel constraint
+
+Vercel's idiomatic dynamic route convention is a folder named `[id]` containing
+`index.go`. **This does not work with Go** because Go's module system forbids
+`[` in import paths (`malformed import path: invalid char '['`). The same
+restriction also rules out `[id].go` as a filename.
+
+**Workaround:** use a plain `id/` directory and add a `vercel.json` rewrite:
+
+```json
+{ "source": "/api/events/:id", "destination": "/api/events/id?id=:id" }
+```
+
+The handler at `api/events/id/index.go` reads the event ID from
+`r.URL.Query().Get("id")`. The REST URLs seen by the frontend are unchanged
+(`/api/events/123`); only the internal routing differs.
+
+### Local development
+
+```bash
+# Fill in .env.local first, then:
+vercel dev        # runs both the Vite frontend and the Go functions on one port
 ```
