@@ -1,0 +1,382 @@
+openapi: 3.0.3
+info:
+  title: Marathon Bucket List API
+  description: |
+    REST API for managing marathon and half-marathon race events.
+    All endpoints are Vercel Go serverless functions backed by Supabase (Postgres).
+    The frontend replaces its IndexedDB layer with calls to these endpoints.
+  version: 1.0.0
+servers:
+  - url: /api
+    description: Vercel serverless functions (same origin)
+
+components:
+  schemas:
+    EventType:
+      type: string
+      enum: [half, full, other]
+      description: >
+        half = half marathon (13.1 mi / 21.1 km),
+        full = marathon (26.2 mi / 42.2 km),
+        other = custom distance (requires customDistance + customDistanceUnit)
+
+    DistanceUnit:
+      type: string
+      enum: [mi, km]
+
+    EventStatus:
+      type: string
+      enum: [planned, finished]
+      description: >
+        Derived server-side from finishedDate. Never set by the client directly.
+        finished when finishedDate is non-null, planned otherwise.
+
+    MarathonEvent:
+      type: object
+      required:
+        - id
+        - name
+        - eventType
+        - plannedDate
+        - state
+        - country
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          readOnly: true
+          example: "1716900000000-abc1234"
+          description: Client-generated ID assigned on create (timestamp + random suffix)
+        name:
+          type: string
+          example: "Chicago Marathon"
+        eventType:
+          $ref: "#/components/schemas/EventType"
+        customDistance:
+          type: number
+          format: float
+          example: 12.5
+          description: Only set when eventType is "other". Stored to 2 decimal places.
+        customDistanceUnit:
+          $ref: "#/components/schemas/DistanceUnit"
+        plannedDate:
+          type: string
+          format: date
+          example: "2025-10-12"
+          description: ISO 8601 date (YYYY-MM-DD). Always required.
+        finishedDate:
+          type: string
+          format: date
+          example: "2025-10-12"
+          description: >
+            Set by the client to the same value as plannedDate when the race
+            date is today or in the past. The server derives status from this field.
+        finishedTime:
+          type: string
+          example: "3:45:22"
+          description: Actual finish time in H:MM:SS format.
+        goalFinishTime:
+          type: string
+          example: "3:30:00"
+          description: Target finish time in H:MM:SS format.
+        city:
+          type: string
+          example: "Chicago"
+        state:
+          type: string
+          example: "IL"
+          description: >
+            US state abbreviation (e.g. "CA", "NY") for domestic events,
+            or the em-dash literal "—" for international events.
+        country:
+          type: string
+          example: "United States"
+        website:
+          type: string
+          format: uri
+          example: "https://www.chicagomarathon.com"
+        stravaUrl:
+          type: string
+          format: uri
+          example: "https://www.strava.com/activities/123456789"
+        status:
+          $ref: "#/components/schemas/EventStatus"
+          readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    MarathonEventInput:
+      type: object
+      required:
+        - name
+        - eventType
+        - plannedDate
+        - state
+        - country
+      properties:
+        name:
+          type: string
+          example: "Boston Marathon"
+        eventType:
+          $ref: "#/components/schemas/EventType"
+        customDistance:
+          type: number
+          format: float
+          description: Required when eventType is "other".
+        customDistanceUnit:
+          $ref: "#/components/schemas/DistanceUnit"
+        plannedDate:
+          type: string
+          format: date
+        finishedDate:
+          type: string
+          format: date
+          description: >
+            Set to plannedDate by the client when race date is today or past.
+            Omit for future events.
+        finishedTime:
+          type: string
+          description: "H:MM:SS — only meaningful when finishedDate is set."
+        goalFinishTime:
+          type: string
+          description: "H:MM:SS — target time, shown in both planned and finished views."
+        city:
+          type: string
+        state:
+          type: string
+          description: US state abbrev or "—" for international.
+        country:
+          type: string
+        website:
+          type: string
+          format: uri
+        stravaUrl:
+          type: string
+          format: uri
+
+    ListResponse:
+      type: object
+      required: [data, total, page, limit, totalPages]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/MarathonEvent"
+        total:
+          type: integer
+          description: Total number of matching events (before pagination).
+          example: 42
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 100
+        totalPages:
+          type: integer
+          example: 1
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          example: "event not found"
+
+paths:
+  /events:
+    get:
+      operationId: listEvents
+      summary: List all events with optional search and filters
+      description: >
+        Returns all events belonging to the authenticated user.
+        Supports full-text search across name/city/state/country,
+        filtering by event type and status, and server-side pagination.
+        The frontend currently fetches all events (limit=1000) and applies
+        client-side pagination; these params are available for future use.
+      parameters:
+        - name: q
+          in: query
+          description: >
+            Search term. Case-insensitive match against name, city, state, country.
+          required: false
+          schema:
+            type: string
+            example: "chicago"
+        - name: type
+          in: query
+          description: Filter by event type. Omit or pass "all" to return all types.
+          required: false
+          schema:
+            $ref: "#/components/schemas/EventType"
+        - name: status
+          in: query
+          description: Filter by derived status. Omit to return both planned and finished.
+          required: false
+          schema:
+            $ref: "#/components/schemas/EventStatus"
+        - name: page
+          in: query
+          description: 1-based page number.
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          description: Results per page. Default 1000 (effectively all) for client-side pagination use case.
+          required: false
+          schema:
+            type: integer
+            default: 1000
+            minimum: 1
+            maximum: 1000
+      responses:
+        "200":
+          description: Paginated list of events.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListResponse"
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    post:
+      operationId: createEvent
+      summary: Create a new event
+      description: >
+        Creates a new marathon/race event. The server assigns id, createdAt,
+        updatedAt, and derives status from finishedDate.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarathonEventInput"
+            example:
+              name: "Chicago Marathon"
+              eventType: "full"
+              plannedDate: "2025-10-12"
+              city: "Chicago"
+              state: "IL"
+              country: "United States"
+              goalFinishTime: "3:30:00"
+              website: "https://www.chicagomarathon.com"
+      responses:
+        "201":
+          description: The created event.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarathonEvent"
+        "400":
+          description: Validation error (missing required fields).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /events/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Event ID (client-generated timestamp-random string).
+        schema:
+          type: string
+          example: "1716900000000-abc1234"
+
+    get:
+      operationId: getEvent
+      summary: Get a single event by ID
+      responses:
+        "200":
+          description: The requested event.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarathonEvent"
+        "404":
+          description: Event not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    patch:
+      operationId: updateEvent
+      summary: Update an existing event
+      description: >
+        Partial update — only the fields present in the body are updated.
+        The server re-derives status from the updated finishedDate.
+        updatedAt is updated automatically by a Postgres trigger.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarathonEventInput"
+      responses:
+        "200":
+          description: The updated event.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarathonEvent"
+        "404":
+          description: Event not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      operationId: deleteEvent
+      summary: Delete an event
+      responses:
+        "204":
+          description: Deleted successfully. No response body.
+        "404":
+          description: Event not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
