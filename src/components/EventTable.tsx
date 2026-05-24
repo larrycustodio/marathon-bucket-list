@@ -67,7 +67,7 @@ export default function EventTable({
         !q ||
         e.name.toLowerCase().includes(q) ||
         e.state.toLowerCase().includes(q) ||
-        e.city.toLowerCase().includes(q) ||
+        e.city?.toLowerCase().includes(q) ||
         e.country.toLowerCase().includes(q);
       const matchesType = typeFilter === "all" || e.eventType === typeFilter;
       return matchesSearch && matchesType;
