@@ -39,8 +39,8 @@ export default function Dashboard() {
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-4">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Race Event Bucket List</h1>
-        <p className="text-slate-500 mt-1 text-sm">Races done and races I dream of finishing, before I grow 👴</p>
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Places I Have Gone 🏃‍♂️</h1>
+        <p className="text-slate-500 mt-1 text-sm">Celebrating the joy of running: from the places racing has taken me, and future start lines calling my name</p>
       </div>
 
       {/* Two-panel layout */}

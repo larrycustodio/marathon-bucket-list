@@ -166,7 +166,7 @@ export default function EventTable({
                     <th className="pb-2 pr-4 font-medium">Time</th>
                   )}
                   <th className="pb-2 pr-4 font-medium">Goal</th>
-                  <th className="pb-2 font-medium">Actions</th>
+                  <th className="pb-2 font-medium sr-only">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -240,7 +240,7 @@ export default function EventTable({
                       <div className="flex gap-2">
                         <button
                           onClick={() => onEdit(event)}
-                          className="text-xs text-slate-500 hover:text-emerald-600 transition-colors"
+                          className="cursor-pointer text-xs text-slate-500 hover:text-emerald-600 transition-colors"
                         >
                           Edit
                         </button>
@@ -249,7 +249,7 @@ export default function EventTable({
                             if (confirm(`Delete "${event.name}"?`))
                               deleteEvent.mutate(event.id);
                           }}
-                          className="text-xs text-slate-400 hover:text-red-500 transition-colors"
+                          className="cursor-pointer text-xs text-slate-400 hover:text-red-500 transition-colors"
                         >
                           Delete
                         </button>

@@ -168,9 +168,6 @@ export default function SummaryPanel({ events, finished, planned }: Props) {
       </div>
 
       <div className={CARD}>
-        <div className="text-xs text-slate-400 uppercase tracking-widest mt-0.5 font-medium">
-          What to Tell Everyone
-        </div>
         <SummaryWidget events={events} finished={finished} planned={planned} />
       </div>
     </div>
